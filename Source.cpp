@@ -59,7 +59,7 @@ uint16 swapByteOrder(uint16 us)
 		(us << 8);
 }
 
-constexpr uint32 swapByteOrder(uint32 ui)
+uint32 swapByteOrder(uint32 ui)
 {
 	return (ui >> 24) |
 		((ui << 8) & 0x00FF0000) |
@@ -67,6 +67,7 @@ constexpr uint32 swapByteOrder(uint32 ui)
 		(ui << 24);
 }
 
+/*
 constexpr uint64 swapByteOrderOld(uint64 ull)
 {
 	return (ull >> 56) |
@@ -79,8 +80,9 @@ constexpr uint64 swapByteOrderOld(uint64 ull)
 		(ull << 56);
 
 }
+*/
 
-constexpr uint64 swapByteOrder(uint64 val)
+uint64 swapByteOrder(uint64 val)
 {
 	val = ((val << 8) & 0xFF00FF00FF00FF00ULL) | ((val >> 8) & 0x00FF00FF00FF00FFULL);
 	val = ((val << 16) & 0xFFFF0000FFFF0000ULL) | ((val >> 16) & 0x0000FFFF0000FFFFULL);
