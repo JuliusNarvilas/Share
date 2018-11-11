@@ -90,8 +90,8 @@ uint64 swapByteOrder(uint64 val)
 }
 
 
-//#define CORRECT_DATA(data) swapByteOrder(data)
-#define CORRECT_DATA(data) data
+#define CORRECT_DATA(data) swapByteOrder(data)
+//#define CORRECT_DATA(data) data
 
 
 class SpookyHash
@@ -267,7 +267,17 @@ public:
 	//
 	static INLINE void ShortMix(uint64 &h0, uint64 &h1, uint64 &h2, uint64 &h3)
 	{
-		h2 = Rot64(h2, 50);  h2 += h3;  h0 ^= h2;
+		printf("	h2 before rot: %llu \n", h2);
+
+		h2 = Rot64(h2, 50);
+		printf("	h2 after rot: %llu \n", h2);
+
+		h2 += h3;
+		printf("	h2 += h3: %llu \n", h2);
+
+		h0 ^= h2;
+		printf("	h0 ^= h2: %llu \n", h0);
+
 		h3 = Rot64(h3, 52);  h3 += h0;  h1 ^= h3;
 		h0 = Rot64(h0, 30);  h0 += h1;  h2 ^= h0;
 		h1 = Rot64(h1, 41);  h1 += h2;  h3 ^= h1;
@@ -401,6 +411,8 @@ void SpookyHash::Short(
 	if (length > 15)
 	{
 		const uint64 *end = u.p64 + (length / 32) * 4;
+
+		printf("a, b: %llu ; %llu \n", a, b);
 
 		int count = 0;
 		// handle all complete sets of 32 bytes
