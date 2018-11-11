@@ -8,7 +8,7 @@
 //   Feb  5 2012: adjusted definitions of uint* to be more portable
 //   Mar 30 2012: 3 bytes/cycle, not 4.  Alpha was 4 but wasn't thorough enough.
 //   August 5 2012: SpookyV2 (different results)
-// 
+//
 // Up to 3 bytes/cycle for long messages.  Reasonably fast for short messages.
 // All 1 or 2 bit deltas achieve avalanche within 1% bias per output bit.
 //
@@ -20,9 +20,9 @@
 //
 // Google's CityHash has similar specs to SpookyHash, and CityHash is faster
 // on new Intel boxes.  MD4 and MD5 also have similar specs, but they are orders
-// of magnitude slower.  CRCs are two or more times slower, but unlike 
-// SpookyHash, they have nice math for combining the CRCs of pieces to form 
-// the CRCs of wholes.  There are also cryptographic hashes, but those are even 
+// of magnitude slower.  CRCs are two or more times slower, but unlike
+// SpookyHash, they have nice math for combining the CRCs of pieces to form
+// the CRCs of wholes.  There are also cryptographic hashes, but those are even
 // slower than MD5.
 //
 
@@ -42,6 +42,54 @@ typedef  uint32_t  uint32;
 typedef  uint16_t  uint16;
 typedef  uint8_t   uint8;
 #endif
+
+
+#include <stdio.h>
+
+bool IsLittleEndian()
+{
+	const int num = 1;
+	return *(const char*)&num == 1;
+}
+
+
+uint16 swapByteOrder(uint16 us)
+{
+	return (us >> 8) |
+		(us << 8);
+}
+
+constexpr uint32 swapByteOrder(uint32 ui)
+{
+	return (ui >> 24) |
+		((ui << 8) & 0x00FF0000) |
+		((ui >> 8) & 0x0000FF00) |
+		(ui << 24);
+}
+
+constexpr uint64 swapByteOrderOld(uint64 ull)
+{
+	return (ull >> 56) |
+		((ull << 40) & 0x00FF000000000000) |
+		((ull << 24) & 0x0000FF0000000000) |
+		((ull << 8) & 0x000000FF00000000) |
+		((ull >> 8) & 0x00000000FF000000) |
+		((ull >> 24) & 0x0000000000FF0000) |
+		((ull >> 40) & 0x000000000000FF00) |
+		(ull << 56);
+
+}
+
+constexpr uint64 swapByteOrder(uint64 val)
+{
+	val = ((val << 8) & 0xFF00FF00FF00FF00ULL) | ((val >> 8) & 0x00FF00FF00FF00FFULL);
+	val = ((val << 16) & 0xFFFF0000FFFF0000ULL) | ((val >> 16) & 0x0000FFFF0000FFFFULL);
+	return (val << 32) | (val >> 32);
+}
+
+
+//#define CORRECT_DATA(data) swapByteOrder(data)
+#define CORRECT_DATA(data) data
 
 
 class SpookyHash
@@ -109,6 +157,7 @@ public:
 		uint64 *hash1,    // out only: first 64 bits of hash value.
 		uint64 *hash2);   // out only: second 64 bits of hash value.
 
+
 	//
 	// left rotate a 64-bit value by k bytes
 	//
@@ -136,18 +185,18 @@ public:
 		uint64 &s4, uint64 &s5, uint64 &s6, uint64 &s7,
 		uint64 &s8, uint64 &s9, uint64 &s10, uint64 &s11)
 	{
-		s0 += data[0];    s2 ^= s10;    s11 ^= s0;    s0 = Rot64(s0, 11);    s11 += s1;
-		s1 += data[1];    s3 ^= s11;    s0 ^= s1;    s1 = Rot64(s1, 32);    s0 += s2;
-		s2 += data[2];    s4 ^= s0;    s1 ^= s2;    s2 = Rot64(s2, 43);    s1 += s3;
-		s3 += data[3];    s5 ^= s1;    s2 ^= s3;    s3 = Rot64(s3, 31);    s2 += s4;
-		s4 += data[4];    s6 ^= s2;    s3 ^= s4;    s4 = Rot64(s4, 17);    s3 += s5;
-		s5 += data[5];    s7 ^= s3;    s4 ^= s5;    s5 = Rot64(s5, 28);    s4 += s6;
-		s6 += data[6];    s8 ^= s4;    s5 ^= s6;    s6 = Rot64(s6, 39);    s5 += s7;
-		s7 += data[7];    s9 ^= s5;    s6 ^= s7;    s7 = Rot64(s7, 57);    s6 += s8;
-		s8 += data[8];    s10 ^= s6;    s7 ^= s8;    s8 = Rot64(s8, 55);    s7 += s9;
-		s9 += data[9];    s11 ^= s7;    s8 ^= s9;    s9 = Rot64(s9, 54);    s8 += s10;
-		s10 += data[10];    s0 ^= s8;    s9 ^= s10;    s10 = Rot64(s10, 22);    s9 += s11;
-		s11 += data[11];    s1 ^= s9;    s10 ^= s11;    s11 = Rot64(s11, 46);    s10 += s0;
+		s0 += CORRECT_DATA(data[0]);    s2 ^= s10;    s11 ^= s0;    s0 = Rot64(s0, 11);    s11 += s1;
+		s1 += CORRECT_DATA(data[1]);    s3 ^= s11;    s0 ^= s1;    s1 = Rot64(s1, 32);    s0 += s2;
+		s2 += CORRECT_DATA(data[2]);    s4 ^= s0;    s1 ^= s2;    s2 = Rot64(s2, 43);    s1 += s3;
+		s3 += CORRECT_DATA(data[3]);    s5 ^= s1;    s2 ^= s3;    s3 = Rot64(s3, 31);    s2 += s4;
+		s4 += CORRECT_DATA(data[4]);    s6 ^= s2;    s3 ^= s4;    s4 = Rot64(s4, 17);    s3 += s5;
+		s5 += CORRECT_DATA(data[5]);    s7 ^= s3;    s4 ^= s5;    s5 = Rot64(s5, 28);    s4 += s6;
+		s6 += CORRECT_DATA(data[6]);    s8 ^= s4;    s5 ^= s6;    s6 = Rot64(s6, 39);    s5 += s7;
+		s7 += CORRECT_DATA(data[7]);    s9 ^= s5;    s6 ^= s7;    s7 = Rot64(s7, 57);    s6 += s8;
+		s8 += CORRECT_DATA(data[8]);    s10 ^= s6;    s7 ^= s8;    s8 = Rot64(s8, 55);    s7 += s9;
+		s9 += CORRECT_DATA(data[9]);    s11 ^= s7;    s8 ^= s9;    s9 = Rot64(s9, 54);    s8 += s10;
+		s10 += CORRECT_DATA(data[10]);    s0 ^= s8;    s9 ^= s10;    s10 = Rot64(s10, 22);    s9 += s11;
+		s11 += CORRECT_DATA(data[11]);    s1 ^= s9;    s10 ^= s11;    s11 = Rot64(s11, 46);    s10 += s0;
 	}
 
 	//
@@ -191,16 +240,16 @@ public:
 		uint64 &h4, uint64 &h5, uint64 &h6, uint64 &h7,
 		uint64 &h8, uint64 &h9, uint64 &h10, uint64 &h11)
 	{
-		h0 += data[0];   h1 += data[1];   h2 += data[2];   h3 += data[3];
-		h4 += data[4];   h5 += data[5];   h6 += data[6];   h7 += data[7];
-		h8 += data[8];   h9 += data[9];   h10 += data[10]; h11 += data[11];
+		h0 += CORRECT_DATA(data[0]);   h1 += CORRECT_DATA(data[1]);   h2 += CORRECT_DATA(data[2]);   h3 += CORRECT_DATA(data[3]);
+		h4 += CORRECT_DATA(data[4]);   h5 += CORRECT_DATA(data[5]);   h6 += CORRECT_DATA(data[6]);   h7 += CORRECT_DATA(data[7]);
+		h8 += CORRECT_DATA(data[8]);   h9 += CORRECT_DATA(data[9]);   h10 += CORRECT_DATA(data[10]); h11 += CORRECT_DATA(data[11]);
 		EndPartial(h0, h1, h2, h3, h4, h5, h6, h7, h8, h9, h10, h11);
 		EndPartial(h0, h1, h2, h3, h4, h5, h6, h7, h8, h9, h10, h11);
 		EndPartial(h0, h1, h2, h3, h4, h5, h6, h7, h8, h9, h10, h11);
 	}
 
 	//
-	// The goal is for each bit of the input to expand into 128 bits of 
+	// The goal is for each bit of the input to expand into 128 bits of
 	//   apparent entropy before it is fully overwritten.
 	// n trials both set and cleared at least m bits of h0 h1 h2 h3
 	//   n: 2   m: 29
@@ -264,7 +313,7 @@ private:
 	// Short has a low startup cost, the normal mode is good for long
 	// keys, the cost crossover is at about 192 bytes.  The two modes were
 	// held to the same quality bar.
-	// 
+	//
 	static void Short(
 		const void *message,  // message (array of bytes, not necessarily aligned)
 		size_t length,        // length of message (in bytes)
@@ -287,7 +336,7 @@ private:
 	//  * is a not-very-regular mix of 1's and 0's
 	//  * does not need any other special mathematical properties
 	//
-	static const uint64 sc_const = 0xdeadbeefdeadbeefLL;
+	static const uint64 sc_const = 0xdeadbeefdeadbeefLLU;
 
 	uint64 m_data[2 * sc_numVars];   // unhashed data, for partial messages
 	uint64 m_state[sc_numVars];  // internal state of the hash
@@ -315,7 +364,7 @@ private:
 #define ALLOW_UNALIGNED_READS 1
 
 //
-// short hash ... it could be used on any message, 
+// short hash ... it could be used on any message,
 // but it's used by Spooky just for short messages.
 //
 void SpookyHash::Short(
@@ -351,26 +400,42 @@ void SpookyHash::Short(
 	{
 		const uint64 *end = u.p64 + (length / 32) * 4;
 
+		int count = 0;
 		// handle all complete sets of 32 bytes
 		for (; u.p64 < end; u.p64 += 4)
 		{
-			c += u.p64[0];
-			d += u.p64[1];
+			c += CORRECT_DATA(u.p64[0]);
+			printf("c: %llu \n", c);
+			d += CORRECT_DATA(u.p64[1]);
+			printf("d: %llu \n", d);
+
 			ShortMix(a, b, c, d);
-			a += u.p64[2];
-			b += u.p64[3];
+
+			printf("a, b: %llu ; %llu \n", a, b);
+
+			a += CORRECT_DATA(u.p64[2]);
+			b += CORRECT_DATA(u.p64[3]);
+
+			printf("step %i: %llu %llu \n", count++, a, b);
 		}
+
+
+		printf("\n ----- \n");
 
 		//Handle the case of 16+ remaining bytes.
 		if (remainder >= 16)
 		{
-			c += u.p64[0];
-			d += u.p64[1];
+			c += CORRECT_DATA(u.p64[0]);
+			d += CORRECT_DATA(u.p64[1]);
 			ShortMix(a, b, c, d);
 			u.p64 += 2;
 			remainder -= 16;
+
+			printf("step %i: %llu %llu \n", count++, a, b);
 		}
 	}
+
+	printf("\n ======= \n");
 
 	// Handle the last 0..15 bytes, and its length
 	d += ((uint64)length) << 56;
@@ -383,8 +448,8 @@ void SpookyHash::Short(
 	case 13:
 		d += ((uint64)u.p8[12]) << 32;
 	case 12:
-		d += u.p32[2];
-		c += u.p64[0];
+		d += CORRECT_DATA(u.p32[2]);
+		c += CORRECT_DATA(u.p64[0]);
 		break;
 	case 11:
 		d += ((uint64)u.p8[10]) << 16;
@@ -393,7 +458,7 @@ void SpookyHash::Short(
 	case 9:
 		d += (uint64)u.p8[8];
 	case 8:
-		c += u.p64[0];
+		c += CORRECT_DATA(u.p64[0]);
 		break;
 	case 7:
 		c += ((uint64)u.p8[6]) << 48;
@@ -402,7 +467,7 @@ void SpookyHash::Short(
 	case 5:
 		c += ((uint64)u.p8[4]) << 32;
 	case 4:
-		c += u.p32[0];
+		c += CORRECT_DATA(u.p32[0]);
 		break;
 	case 3:
 		c += ((uint64)u.p8[2]) << 16;
@@ -418,6 +483,8 @@ void SpookyHash::Short(
 	ShortEnd(a, b, c, d);
 	*hash1 = a;
 	*hash2 = b;
+
+	printf("last step: %llu %llu \n", a, b);
 }
 
 
@@ -477,9 +544,9 @@ void SpookyHash::Hash128(
 	remainder = (length - ((const uint8 *)end - (const uint8 *)message));
 	memcpy(buf, end, remainder);
 	memset(((uint8 *)buf) + remainder, 0, sc_blockSize - remainder);
-	((uint8 *)buf)[sc_blockSize - 1] = remainder;
+	((uint8 *)buf)[sc_blockSize - 1] = CORRECT_DATA(remainder);
 
-	// do some final mixing 
+	// do some final mixing
 	End(buf, h0, h1, h2, h3, h4, h5, h6, h7, h8, h9, h10, h11);
 	*hash1 = h0;
 	*hash2 = h1;
@@ -651,8 +718,6 @@ void SpookyHash::Final(uint64 *hash1, uint64 *hash2)
 
 
 
-
-#include<stdio.h>
 #include <string.h>
 
 int main()
@@ -673,7 +738,7 @@ int main()
 	long long unsigned hash2;
 
 	const char* data = "jyfggljfkjhfhfuyhtdfvuyhdfuyhfhiyjhfiuyfiuyrfiytsvbiughjpmsofdmdsfumnds8a iucravyevrd6rediynaeoi7t8e63";
-	int length = strlen(data);
+	int length = 102;
 
 	SpookyHash::Hash128(data, length, &hash1, &hash2);
 
