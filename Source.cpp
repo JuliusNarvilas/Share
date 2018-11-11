@@ -8,7 +8,7 @@
 //   Feb  5 2012: adjusted definitions of uint* to be more portable
 //   Mar 30 2012: 3 bytes/cycle, not 4.  Alpha was 4 but wasn't thorough enough.
 //   August 5 2012: SpookyV2 (different results)
-//
+// 
 // Up to 3 bytes/cycle for long messages.  Reasonably fast for short messages.
 // All 1 or 2 bit deltas achieve avalanche within 1% bias per output bit.
 //
@@ -20,9 +20,9 @@
 //
 // Google's CityHash has similar specs to SpookyHash, and CityHash is faster
 // on new Intel boxes.  MD4 and MD5 also have similar specs, but they are orders
-// of magnitude slower.  CRCs are two or more times slower, but unlike
-// SpookyHash, they have nice math for combining the CRCs of pieces to form
-// the CRCs of wholes.  There are also cryptographic hashes, but those are even
+// of magnitude slower.  CRCs are two or more times slower, but unlike 
+// SpookyHash, they have nice math for combining the CRCs of pieces to form 
+// the CRCs of wholes.  There are also cryptographic hashes, but those are even 
 // slower than MD5.
 //
 
@@ -82,15 +82,17 @@ constexpr uint64 swapByteOrderOld(uint64 ull)
 }
 */
 
-uint64 swapByteOrder(uint64 val)
+constexpr uint64 swapByteOrder(uint64 val)
 {
 	val = ((val << 8) & 0xFF00FF00FF00FF00ULL) | ((val >> 8) & 0x00FF00FF00FF00FFULL);
 	val = ((val << 16) & 0xFFFF0000FFFF0000ULL) | ((val >> 16) & 0x0000FFFF0000FFFFULL);
 	return (val << 32) | (val >> 32);
 }
 
+#include "Swap.h"
 
-#define CORRECT_DATA(data) swapByteOrder(data)
+#define CORRECT_DATA(data) endian::endian_reverse(data)
+//#define CORRECT_DATA(data) swapByteOrder(data)
 //#define CORRECT_DATA(data) data
 
 
@@ -187,7 +189,9 @@ public:
 		uint64 &s4, uint64 &s5, uint64 &s6, uint64 &s7,
 		uint64 &s8, uint64 &s9, uint64 &s10, uint64 &s11)
 	{
-		s0 += CORRECT_DATA(data[0]);    s2 ^= s10;    s11 ^= s0;    s0 = Rot64(s0, 11);    s11 += s1;
+		s0 += CORRECT_DATA(data[0]);
+		
+		s2 ^= s10;    s11 ^= s0;    s0 = Rot64(s0, 11);    s11 += s1;
 		s1 += CORRECT_DATA(data[1]);    s3 ^= s11;    s0 ^= s1;    s1 = Rot64(s1, 32);    s0 += s2;
 		s2 += CORRECT_DATA(data[2]);    s4 ^= s0;    s1 ^= s2;    s2 = Rot64(s2, 43);    s1 += s3;
 		s3 += CORRECT_DATA(data[3]);    s5 ^= s1;    s2 ^= s3;    s3 = Rot64(s3, 31);    s2 += s4;
@@ -251,7 +255,7 @@ public:
 	}
 
 	//
-	// The goal is for each bit of the input to expand into 128 bits of
+	// The goal is for each bit of the input to expand into 128 bits of 
 	//   apparent entropy before it is fully overwritten.
 	// n trials both set and cleared at least m bits of h0 h1 h2 h3
 	//   n: 2   m: 29
@@ -267,17 +271,7 @@ public:
 	//
 	static INLINE void ShortMix(uint64 &h0, uint64 &h1, uint64 &h2, uint64 &h3)
 	{
-		printf("	h2 before rot: %llu \n", h2);
-
-		h2 = Rot64(h2, 50);
-		printf("	h2 after rot: %llu \n", h2);
-
-		h2 += h3;
-		printf("	h2 += h3: %llu \n", h2);
-
-		h0 ^= h2;
-		printf("	h0 ^= h2: %llu \n", h0);
-
+		h2 = Rot64(h2, 50);  h2 += h3;  h0 ^= h2;
 		h3 = Rot64(h3, 52);  h3 += h0;  h1 ^= h3;
 		h0 = Rot64(h0, 30);  h0 += h1;  h2 ^= h0;
 		h1 = Rot64(h1, 41);  h1 += h2;  h3 ^= h1;
@@ -325,7 +319,7 @@ private:
 	// Short has a low startup cost, the normal mode is good for long
 	// keys, the cost crossover is at about 192 bytes.  The two modes were
 	// held to the same quality bar.
-	//
+	// 
 	static void Short(
 		const void *message,  // message (array of bytes, not necessarily aligned)
 		size_t length,        // length of message (in bytes)
@@ -376,7 +370,7 @@ private:
 #define ALLOW_UNALIGNED_READS 1
 
 //
-// short hash ... it could be used on any message,
+// short hash ... it could be used on any message, 
 // but it's used by Spooky just for short messages.
 //
 void SpookyHash::Short(
@@ -412,29 +406,16 @@ void SpookyHash::Short(
 	{
 		const uint64 *end = u.p64 + (length / 32) * 4;
 
-		printf("a, b: %llu ; %llu \n", a, b);
-
 		int count = 0;
 		// handle all complete sets of 32 bytes
 		for (; u.p64 < end; u.p64 += 4)
 		{
 			c += CORRECT_DATA(u.p64[0]);
-			printf("c: %llu \n", c);
 			d += CORRECT_DATA(u.p64[1]);
-			printf("d: %llu \n", d);
-
 			ShortMix(a, b, c, d);
-
-			printf("a, b: %llu ; %llu \n", a, b);
-
 			a += CORRECT_DATA(u.p64[2]);
 			b += CORRECT_DATA(u.p64[3]);
-
-			printf("step %i: %llu %llu \n", count++, a, b);
 		}
-
-
-		printf("\n ----- \n");
 
 		//Handle the case of 16+ remaining bytes.
 		if (remainder >= 16)
@@ -444,12 +425,8 @@ void SpookyHash::Short(
 			ShortMix(a, b, c, d);
 			u.p64 += 2;
 			remainder -= 16;
-
-			printf("step %i: %llu %llu \n", count++, a, b);
 		}
 	}
-
-	printf("\n ======= \n");
 
 	// Handle the last 0..15 bytes, and its length
 	d += ((uint64)length) << 56;
@@ -497,8 +474,6 @@ void SpookyHash::Short(
 	ShortEnd(a, b, c, d);
 	*hash1 = a;
 	*hash2 = b;
-
-	printf("last step: %llu %llu \n", a, b);
 }
 
 
@@ -560,7 +535,7 @@ void SpookyHash::Hash128(
 	memset(((uint8 *)buf) + remainder, 0, sc_blockSize - remainder);
 	((uint8 *)buf)[sc_blockSize - 1] = CORRECT_DATA(remainder);
 
-	// do some final mixing
+	// do some final mixing 
 	End(buf, h0, h1, h2, h3, h4, h5, h6, h7, h8, h9, h10, h11);
 	*hash1 = h0;
 	*hash2 = h1;
@@ -748,11 +723,11 @@ int main()
 
 	printf("\nsize of long long: %i \n", (int) sizeof(long long unsigned) * 8);
 
-	long long unsigned hash1;
-	long long unsigned hash2;
+	long long unsigned hash1 = 0;
+	long long unsigned hash2 = 0;
 
-	const char* data = "jyfggljfkjhfhfuyhtdfvuyhdfuyhfhiyjhfiuyfiuyrfiytsvbiughjpmsofdmdsfumnds8a iucravyevrd6rediynaeoi7t8e63";
-	int length = 102;
+	const char* data = "jyfggljfkjhfhfuyhtdfvuyhdfuyhfhiyjhfiuyfiuyrfiytsvbiughjpmsofdmdsfumnds8a iucravyevrd6rediynaeoi7t8e63, jyfggljfkjhfhfuyhtdfvuyhdfuyhfhiyjhfiuyfiuyrfiytsvbiughjpmsofdmdsfumnds8a iucravyevrd6rediynaeoi7t8e63";
+	int length = strlen(data);
 
 	SpookyHash::Hash128(data, length, &hash1, &hash2);
 
